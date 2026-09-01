@@ -1,44 +1,43 @@
-import { useEffect, useState } from "react";
-import { connectAsRestaurant, socket } from "./lib/socket.js";
+import { useState } from "react";
+import { KanbanBoard } from "./components/KanbanBoard";
+import { PendingPayments } from "./components/PendingPayments";
+import { MenuManager } from "./components/MenuManager";
+import { DeliveryZonesManager } from "./components/DeliveryZonesManager";
+import { useOrders } from "./lib/useOrders";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3333";
-
-type Order = { id: string; status: string; total: string };
+type Tab = "queue" | "menu" | "zones";
 
 export default function App() {
-  const [orders, setOrders] = useState<Order[]>([]);
-
-  useEffect(() => {
-    fetch(`${API_URL}/orders/queue`)
-      .then((r) => r.json())
-      .then(setOrders)
-      .catch(() => setOrders([]));
-
-    connectAsRestaurant();
-    socket.on("order:created", (order: Order) => setOrders((prev) => [...prev, order]));
-    socket.on("order:updated", (order: Order) =>
-      setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)))
-    );
-
-    return () => {
-      socket.off("order:created");
-      socket.off("order:updated");
-      socket.disconnect();
-    };
-  }, []);
+  const [tab, setTab] = useState<Tab>("queue");
+  const { queue, pending, updateStatus } = useOrders();
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
-      <h1>Painel App LIVO</h1>
-      <p>Fila de pedidos pagos (tempo real via WebSocket):</p>
-      {orders.length === 0 && <p>Nenhum pedido na fila.</p>}
-      <ul>
-        {orders.map((order) => (
-          <li key={order.id}>
-            #{order.id.slice(-6)} — {order.status} — R$ {order.total}
-          </li>
-        ))}
-      </ul>
-    </main>
+    <div className="app">
+      <header className="app-header">
+        <h1>Painel App LIVO</h1>
+        <nav className="tabs">
+          <button className={tab === "queue" ? "active" : ""} onClick={() => setTab("queue")}>
+            Fila de pedidos
+          </button>
+          <button className={tab === "menu" ? "active" : ""} onClick={() => setTab("menu")}>
+            Cardápio
+          </button>
+          <button className={tab === "zones" ? "active" : ""} onClick={() => setTab("zones")}>
+            Zonas de entrega
+          </button>
+        </nav>
+      </header>
+
+      <main>
+        {tab === "queue" && (
+          <>
+            <PendingPayments orders={pending} />
+            <KanbanBoard orders={queue} onAdvance={updateStatus} />
+          </>
+        )}
+        {tab === "menu" && <MenuManager />}
+        {tab === "zones" && <DeliveryZonesManager />}
+      </main>
+    </div>
   );
 }

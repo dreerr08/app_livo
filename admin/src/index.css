@@ -1,0 +1,181 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+.app-header {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 16px 24px;
+}
+
+.app-header h1 {
+  margin: 0 0 12px 0;
+}
+
+main {
+  padding: 24px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tabs button {
+  background: #eee;
+  color: #444;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  background: #d1495b;
+  color: white;
+}
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 16px;
+  overflow-x: auto;
+}
+
+.kanban-column {
+  background: #ececec;
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 200px;
+}
+
+.kanban-column h3 {
+  margin-top: 0;
+}
+
+.order-card {
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.order-card.pending {
+  border-left: 4px solid #e0a800;
+}
+
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-card ul {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+
+.chip {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.chip-delivery {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.chip-pickup {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pending-payments {
+  margin-bottom: 24px;
+}
+
+.pending-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.two-columns {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.card.unavailable {
+  opacity: 0.55;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  margin-bottom: 8px;
+}
+
+button {
+  background: #d1495b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.badge {
+  display: inline-block;
+  background: #eee;
+  color: #555;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.badge.warn {
+  background: #fde2e2;
+  color: #a11;
+}
+
+.error {
+  color: #a11;
+  background: #fde2e2;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.muted {
+  color: #888;
+  font-size: 0.9rem;
+}

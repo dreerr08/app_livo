@@ -8,3 +8,191 @@ body {
   background: #fafafa;
   color: #1a1a1a;
 }
+
+a {
+  color: #d1495b;
+  text-decoration: none;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: white;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1a1a1a;
+}
+
+.nav-links {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #d1495b;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.card.unavailable {
+  opacity: 0.55;
+}
+
+.card img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.price {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.badge {
+  display: inline-block;
+  background: #eee;
+  color: #555;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.badge.warn {
+  background: #fde2e2;
+  color: #a11;
+}
+
+button,
+.btn {
+  background: #d1495b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty-controls button {
+  padding: 4px 12px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-step {
+  padding: 10px;
+  border-radius: 8px;
+  background: #eee;
+  color: #888;
+}
+
+.status-step.active {
+  background: #d1495b;
+  color: white;
+  font-weight: 600;
+}
+
+.status-step.done {
+  background: #f0e0e2;
+  color: #a11;
+}
+
+.qr-box {
+  text-align: center;
+  padding: 16px;
+}
+
+.qr-box img {
+  width: 220px;
+  height: 220px;
+}
+
+.error {
+  color: #a11;
+  background: #fde2e2;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.muted {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tabs button {
+  flex: 1;
+  background: #eee;
+  color: #555;
+}
+
+.tabs button.active {
+  background: #d1495b;
+  color: white;
+}

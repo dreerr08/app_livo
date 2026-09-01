@@ -46,12 +46,16 @@ export async function verifyOtp(input: VerifyOtpInput) {
     throw new HttpError(400, "Código inválido");
   }
 
+  // Só marcamos o código como consumido depois de garantir que o restante
+  // do fluxo vai completar — senão um cadastro sem nome "queima" o código
+  // válido e o cliente não consegue tentar de novo com o nome preenchido.
+  let customer = await prisma.customer.findUnique({ where: { phone: input.phone } });
+  if (!customer && !input.name) throw new HttpError(400, "Nome é obrigatório no primeiro acesso");
+
   await prisma.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
 
-  let customer = await prisma.customer.findUnique({ where: { phone: input.phone } });
   if (!customer) {
-    if (!input.name) throw new HttpError(400, "Nome é obrigatório no primeiro acesso");
-    customer = await prisma.customer.create({ data: { phone: input.phone, name: input.name } });
+    customer = await prisma.customer.create({ data: { phone: input.phone, name: input.name! } });
   }
 
   const token = jwt.sign({ sub: customer.id, phone: customer.phone }, env.JWT_SECRET, { expiresIn: "30d" });

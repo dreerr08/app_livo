@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "./providers";
+import { NavBar } from "../components/NavBar";
 
 export const metadata: Metadata = {
   title: "App LIVO",
@@ -10,7 +12,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <Providers>
+          <NavBar />
+          <div className="page">{children}</div>
+        </Providers>
+      </body>
     </html>
   );
 }

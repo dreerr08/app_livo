@@ -3,11 +3,17 @@ import request from "supertest";
 import { app } from "./helpers.js";
 
 describe("auth OTP", () => {
-  it("exige nome no primeiro acesso", async () => {
+  it("exige nome no primeiro acesso, e permite tentar de novo com o mesmo código", async () => {
     const { body } = await request(app).post("/auth/otp/request").send({ phone: "11900000001" });
 
-    const res = await request(app).post("/auth/otp/verify").send({ phone: "11900000001", code: body.devCode });
-    expect(res.status).toBe(400);
+    const withoutName = await request(app).post("/auth/otp/verify").send({ phone: "11900000001", code: body.devCode });
+    expect(withoutName.status).toBe(400);
+
+    // Regressão: a tentativa sem nome não pode "queimar" o código válido.
+    const withName = await request(app)
+      .post("/auth/otp/verify")
+      .send({ phone: "11900000001", code: body.devCode, name: "Depois" });
+    expect(withName.status).toBe(200);
   });
 
   it("cadastra e loga com código correto", async () => {

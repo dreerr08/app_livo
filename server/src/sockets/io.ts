@@ -9,9 +9,13 @@ let io: Server;
 export const RESTAURANT_ROOM = "restaurant";
 export const orderRoom = (orderId: string) => `order:${orderId}`;
 
+// Mesma lista de origens permitidas usada pelo CORS do Express (app do
+// cliente e painel do restaurante rodam em portas/domínios diferentes).
+const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
+
 export function initSocket(httpServer: HttpServer) {
   io = new Server(httpServer, {
-    cors: { origin: env.CORS_ORIGIN },
+    cors: { origin: allowedOrigins.includes("*") ? true : allowedOrigins },
   });
 
   io.on("connection", (socket) => {
