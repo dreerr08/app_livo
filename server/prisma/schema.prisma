@@ -44,6 +44,21 @@ enum OrderStatus {
   CANCELLED
 }
 
+// Código de verificação para login por telefone (Épico 4).
+// TODO: hoje o código é apenas armazenado/logado; produção exige plugar
+// um provedor de SMS (ex: Twilio, Zenvia) para o envio real.
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
+
 // ---------- Core ----------
 
 model Customer {

@@ -79,6 +79,25 @@ npm install
 npm run dev              # http://localhost:5173
 ```
 
+## Testes automatizados
+
+O backend tem uma suíte de testes de integração (Vitest + Supertest) que
+sobe a API de verdade contra um banco Postgres de teste, usando um
+provedor de pagamento fake (sem chamar o Mercado Pago). Cobre as regras
+de negócio centrais: pedido só entra na fila após pagamento, CEP fora da
+zona bloqueia entrega, item esgotado bloqueia pedido, cliente não vê
+pedido de outro cliente, fluxo completo de Pix (criação → webhook →
+fila → transição de status), cartão aprovado/recusado, login por OTP.
+
+```bash
+cd server
+npm run test:migrate   # aplica as migrations no banco app_livo_test (server/.env.test)
+npm test
+```
+
+Roda automaticamente no GitHub Actions a cada push (`.github/workflows/test.yml`),
+junto com o typecheck do client e do admin.
+
 ## Ambientes
 
 `NODE_ENV` distingue `development` / `homolog` / `production`. Use bancos

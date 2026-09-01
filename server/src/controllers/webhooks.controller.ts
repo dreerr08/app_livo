@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../prisma.js";
-import { paymentProvider } from "../services/payment/mercadoPagoProvider.js";
+import { paymentProvider } from "../services/payment/index.js";
 import { markOrderPaid, markOrderPaymentFailed } from "../services/orders.service.js";
 
 // Mercado Pago notifica tanto via corpo (POST) quanto via query string

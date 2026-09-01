@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { HttpError } from "../middlewares/errorHandler.js";
 import { quoteDelivery } from "./deliveryZone.service.js";
-import { paymentProvider } from "./payment/mercadoPagoProvider.js";
+import { paymentProvider } from "./payment/index.js";
 import { emitOrderCreated, emitOrderUpdated } from "../sockets/io.js";
 
 export type CreateOrderInput = {
@@ -14,15 +14,23 @@ export type CreateOrderInput = {
   card?: { token: string; paymentMethodId: string; installments: number };
 };
 
-// Monta o pedido, calcula subtotal/frete/total a partir do catálogo (nunca
-// confia em preço vindo do front-end) e gera a cobrança no gateway.
-// O pedido nasce com status AWAITING_PAYMENT e só avança para a fila de
-// preparo (RECEIVED) quando o pagamento é confirmado (ver confirmPayment).
-export async function createOrder(input: CreateOrderInput) {
-  if (input.items.length === 0) throw new HttpError(400, "Pedido precisa ter ao menos um item");
+type Totals = {
+  subtotal: Prisma.Decimal;
+  deliveryFee: Prisma.Decimal;
+  total: Prisma.Decimal;
+  deliveryZoneId?: string;
+  orderItemsData: { productId: string; quantity: number; unitPrice: Prisma.Decimal; subtotal: Prisma.Decimal }[];
+};
 
-  const customer = await prisma.customer.findUnique({ where: { id: input.customerId } });
-  if (!customer) throw new HttpError(404, "Cliente não encontrado");
+// Calcula subtotal/frete/total a partir do catálogo (nunca confia em
+// preço vindo do front-end). Usado tanto para criar o pedido de verdade
+// quanto para a prévia em tempo real do carrinho (quoteOrder).
+async function computeTotals(input: {
+  items: { productId: string; quantity: number }[];
+  deliveryMode: "DELIVERY" | "PICKUP";
+  cep?: string;
+}): Promise<Totals> {
+  if (input.items.length === 0) throw new HttpError(400, "Pedido precisa ter ao menos um item");
 
   const products = await prisma.product.findMany({
     where: { id: { in: input.items.map((i) => i.productId) } },
@@ -47,16 +55,10 @@ export async function createOrder(input: CreateOrderInput) {
 
   let deliveryFee = new Prisma.Decimal(0);
   let deliveryZoneId: string | undefined;
-  let address = null;
 
   if (input.deliveryMode === "DELIVERY") {
-    if (!input.addressId) throw new HttpError(400, "Endereço é obrigatório para entrega");
-    address = await prisma.address.findUnique({ where: { id: input.addressId } });
-    if (!address || address.customerId !== input.customerId) {
-      throw new HttpError(404, "Endereço não encontrado");
-    }
-
-    const quote = await quoteDelivery(address.cep);
+    if (!input.cep) throw new HttpError(400, "CEP é obrigatório para entrega");
+    const quote = await quoteDelivery(input.cep);
     if (!quote.inZone) throw new HttpError(422, "CEP fora da zona de entrega. Escolha retirada no local.");
 
     deliveryZoneId = quote.zoneId;
@@ -64,7 +66,41 @@ export async function createOrder(input: CreateOrderInput) {
     deliveryFee = freeAbove !== null && subtotal.gte(freeAbove) ? new Prisma.Decimal(0) : new Prisma.Decimal(quote.fee);
   }
 
-  const total = subtotal.add(deliveryFee);
+  return { subtotal, deliveryFee, total: subtotal.add(deliveryFee), deliveryZoneId, orderItemsData };
+}
+
+// Prévia de subtotal/frete/total sem persistir nada — usada pelo carrinho
+// do app do cliente para mostrar o total atualizando em tempo real.
+export async function quoteOrder(input: {
+  items: { productId: string; quantity: number }[];
+  deliveryMode: "DELIVERY" | "PICKUP";
+  cep?: string;
+}) {
+  const { subtotal, deliveryFee, total } = await computeTotals(input);
+  return { subtotal: Number(subtotal), deliveryFee: Number(deliveryFee), total: Number(total) };
+}
+
+// Monta o pedido de verdade e gera a cobrança no gateway. O pedido nasce
+// com status AWAITING_PAYMENT e só avança para a fila de preparo
+// (RECEIVED) quando o pagamento é confirmado (ver markOrderPaid).
+export async function createOrder(input: CreateOrderInput) {
+  const customer = await prisma.customer.findUnique({ where: { id: input.customerId } });
+  if (!customer) throw new HttpError(404, "Cliente não encontrado");
+
+  let address = null;
+  if (input.deliveryMode === "DELIVERY") {
+    if (!input.addressId) throw new HttpError(400, "Endereço é obrigatório para entrega");
+    address = await prisma.address.findUnique({ where: { id: input.addressId } });
+    if (!address || address.customerId !== input.customerId) {
+      throw new HttpError(404, "Endereço não encontrado");
+    }
+  }
+
+  const { subtotal, deliveryFee, total, deliveryZoneId, orderItemsData } = await computeTotals({
+    items: input.items,
+    deliveryMode: input.deliveryMode,
+    cep: address?.cep,
+  });
 
   const order = await prisma.order.create({
     data: {
@@ -205,6 +241,16 @@ export async function updateOrderStatus(orderId: string, status: KitchenStatus) 
 export async function listKitchenQueue() {
   return prisma.order.findMany({
     where: { paymentStatus: "PAID", status: { not: "COMPLETED" } },
+    include: { items: { include: { product: true } }, address: true, payments: true, customer: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+// Pedidos aguardando confirmação de pagamento — mostrados destacados e
+// separados da fila de preparo (Épico 9/10).
+export async function listPendingPaymentOrders() {
+  return prisma.order.findMany({
+    where: { paymentStatus: "PENDING" },
     include: { items: { include: { product: true } }, address: true, payments: true, customer: true },
     orderBy: { createdAt: "asc" },
   });
