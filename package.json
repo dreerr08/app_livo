@@ -2,15 +2,15 @@
   "name": "app-livo",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
+  "workspaces": [
+    "server",
+    "client",
+    "admin"
+  ],
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "dev:admin": "npm run dev --workspace admin",
+    "build:server": "npm run build --workspace server"
   }
 }

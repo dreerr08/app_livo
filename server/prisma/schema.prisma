@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum ProductType {
+  AVULSO
+  COMBO
+}
+
+enum DeliveryMode {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUSED
+  REFUNDED
+  CANCELLED
+}
+
+// Pedido só entra na fila de preparo (RECEIVED em diante) depois de pago.
+enum OrderStatus {
+  AWAITING_PAYMENT
+  RECEIVED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  AWAITING_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+// ---------- Core ----------
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  email     String?  @unique
+  passwordHash String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
+  orders    Order[]
+}
+
+model Address {
+  id           String  @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label        String? // ex: "Casa", "Trabalho"
+  cep          String
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  reference    String?
+  isDefault    Boolean @default(false)
+  createdAt    DateTime @default(now())
+
+  orders Order[]
+
+  @@index([customerId])
+}
+
+// Zona de entrega por faixa/prefixo de CEP
+model DeliveryZone {
+  id                  String   @id @default(cuid())
+  name                String
+  cepPrefixes         String[] // prefixos de CEP atendidos, ex: ["01310", "01311"]
+  fee                 Decimal  @db.Decimal(10, 2)
+  freeShippingThreshold Decimal? @db.Decimal(10, 2)
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  orders Order[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  photoUrl    String?
+  price       Decimal     @db.Decimal(10, 2)
+  type        ProductType @default(AVULSO)
+  category    String?
+  isAvailable Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Itens que compõem um combo fixo (quando type = COMBO)
+  comboItems     ComboItem[] @relation("ComboToItems")
+  // Combos dos quais este produto participa como item avulso incluído
+  includedInCombos ComboItem[] @relation("ItemToCombos")
+
+  orderItems OrderItem[]
+}
+
+model ComboItem {
+  id       String  @id @default(cuid())
+  comboId  String
+  combo    Product @relation("ComboToItems", fields: [comboId], references: [id], onDelete: Cascade)
+  itemId   String
+  item     Product @relation("ItemToCombos", fields: [itemId], references: [id])
+  quantity Int     @default(1)
+
+  @@unique([comboId, itemId])
+}
+
+model Order {
+  id             String       @id @default(cuid())
+  customerId     String
+  customer       Customer     @relation(fields: [customerId], references: [id])
+  deliveryMode   DeliveryMode
+  addressId      String?
+  address        Address?     @relation(fields: [addressId], references: [id])
+  deliveryZoneId String?
+  deliveryZone   DeliveryZone? @relation(fields: [deliveryZoneId], references: [id])
+
+  subtotal    Decimal @db.Decimal(10, 2)
+  deliveryFee Decimal @default(0) @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+
+  status        OrderStatus @default(AWAITING_PAYMENT)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  items    OrderItem[]
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+}
+
+// Cobrança no gateway. Um pedido pode ter mais de uma tentativa de pagamento.
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  gateway         String        @default("mercadopago")
+  gatewayPaymentId String?      @unique // payment_id rastreável no gateway
+  amount          Decimal       @db.Decimal(10, 2)
+  pixQrCode       String?       @db.Text
+  pixQrCodeBase64 String?       @db.Text
+  pixCopyPaste    String?       @db.Text
+  rawPayload      Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([gatewayPaymentId])
+}
