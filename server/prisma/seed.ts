@@ -11,6 +11,10 @@ async function main() {
       price: 22.9,
       type: "AVULSO",
       category: "tradicional",
+      calories: 480,
+      weightGrams: 400,
+      ingredients: ["Frango", "Arroz", "Feijão", "Cenoura", "Brócolis"],
+      isPublished: true,
     },
   });
 
@@ -21,6 +25,10 @@ async function main() {
       price: 23.9,
       type: "AVULSO",
       category: "tradicional",
+      calories: 520,
+      weightGrams: 420,
+      ingredients: ["Carne moída", "Molho de tomate", "Arroz", "Batata", "Leite"],
+      isPublished: true,
     },
   });
 
@@ -31,6 +39,23 @@ async function main() {
       price: 26.9,
       type: "AVULSO",
       category: "fitness",
+      calories: 380,
+      weightGrams: 350,
+      ingredients: ["Frango", "Batata doce", "Brócolis", "Azeite"],
+      isPublished: true,
+    },
+  });
+
+  // Rascunho proposital: aparece só no painel, não no app do cliente,
+  // para demonstrar o fluxo de publicação.
+  await prisma.product.create({
+    data: {
+      name: "Marmita Vegana (em preparação)",
+      description: "Ainda em teste de receita",
+      price: 24.9,
+      type: "AVULSO",
+      category: "vegano",
+      isPublished: false,
     },
   });
 
@@ -41,6 +66,7 @@ async function main() {
       price: 99.9,
       type: "COMBO",
       category: "combo",
+      isPublished: true,
       comboItems: {
         create: [
           { itemId: frango.id, quantity: 3 },

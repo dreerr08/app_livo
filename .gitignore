@@ -10,3 +10,5 @@ build/
 .DS_Store
 *.tsbuildinfo
 next-env.d.ts
+server/uploads/products/*
+!server/uploads/products/.gitkeep

@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { apiFetch } from "../lib/api";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { apiFetch, uploadFile } from "../lib/api";
 import type { Product } from "../lib/types";
 
 const emptyForm = {
@@ -9,6 +9,9 @@ const emptyForm = {
   price: "",
   type: "AVULSO" as "AVULSO" | "COMBO",
   category: "",
+  calories: "",
+  weightGrams: "",
+  ingredients: "",
 };
 
 export function MenuManager() {
@@ -17,6 +20,8 @@ export function MenuManager() {
   const [comboItemIds, setComboItemIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function reload() {
     apiFetch<Product[]>("/products").then(setProducts);
@@ -35,6 +40,9 @@ export function MenuManager() {
       price: product.price,
       type: product.type,
       category: product.category ?? "",
+      calories: product.calories?.toString() ?? "",
+      weightGrams: product.weightGrams?.toString() ?? "",
+      ingredients: product.ingredients.join("\n"),
     });
   }
 
@@ -42,6 +50,22 @@ export function MenuManager() {
     setEditingId(null);
     setForm(emptyForm);
     setComboItemIds([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const { url } = await uploadFile("/uploads/product-photo", file, "photo");
+      setForm((prev) => ({ ...prev, photoUrl: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar a foto");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -54,6 +78,12 @@ export function MenuManager() {
       price: Number(form.price),
       type: form.type,
       category: form.category || undefined,
+      calories: form.calories ? Number(form.calories) : undefined,
+      weightGrams: form.weightGrams ? Number(form.weightGrams) : undefined,
+      ingredients: form.ingredients
+        .split("\n")
+        .map((i) => i.trim())
+        .filter(Boolean),
       comboItems: form.type === "COMBO" ? comboItemIds.map((itemId) => ({ itemId, quantity: 1 })) : undefined,
     };
 
@@ -78,6 +108,14 @@ export function MenuManager() {
     reload();
   }
 
+  async function togglePublished(product: Product) {
+    await apiFetch(`/products/${product.id}/published`, {
+      method: "PATCH",
+      body: JSON.stringify({ isPublished: !product.isPublished }),
+    });
+    reload();
+  }
+
   async function remove(product: Product) {
     if (!confirm(`Remover "${product.name}"?`)) return;
     await apiFetch(`/products/${product.id}`, { method: "DELETE" });
@@ -95,7 +133,12 @@ export function MenuManager() {
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
-          <input placeholder="URL da foto" value={form.photoUrl} onChange={(e) => setForm({ ...form, photoUrl: e.target.value })} />
+
+          <label className="muted">Foto</label>
+          {form.photoUrl && <img src={form.photoUrl} alt="Prévia" className="photo-preview" />}
+          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoChange} />
+          {uploading && <p className="muted">Enviando foto...</p>}
+
           <input
             type="number"
             step="0.01"
@@ -109,6 +152,29 @@ export function MenuManager() {
             <option value="AVULSO">Marmita avulsa</option>
             <option value="COMBO">Combo (kit fixo)</option>
           </select>
+
+          <div className="row">
+            <input
+              type="number"
+              placeholder="Calorias (kcal)"
+              value={form.calories}
+              onChange={(e) => setForm({ ...form, calories: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="Peso (g)"
+              value={form.weightGrams}
+              onChange={(e) => setForm({ ...form, weightGrams: e.target.value })}
+            />
+          </div>
+
+          <label className="muted">Ingredientes (um por linha)</label>
+          <textarea
+            rows={4}
+            placeholder={"Frango\nArroz\nFeijão"}
+            value={form.ingredients}
+            onChange={(e) => setForm({ ...form, ingredients: e.target.value })}
+          />
 
           {form.type === "COMBO" && !editingId && (
             <div>
@@ -130,8 +196,17 @@ export function MenuManager() {
 
           {error && <p className="error">{error}</p>}
 
+          {!editingId && (
+            <p className="muted">
+              O item nasce como <strong>rascunho</strong> — só você vê aqui no painel. Publique quando estiver pronto para o
+              cliente ver no app.
+            </p>
+          )}
+
           <div className="row" style={{ marginTop: 8 }}>
-            <button type="submit">{editingId ? "Salvar alterações" : "Cadastrar"}</button>
+            <button type="submit" disabled={uploading}>
+              {editingId ? "Salvar alterações" : "Cadastrar"}
+            </button>
             {editingId && (
               <button type="button" onClick={resetForm}>
                 Cancelar
@@ -146,15 +221,31 @@ export function MenuManager() {
         {products.map((product) => (
           <div key={product.id} className={`card ${product.isAvailable ? "" : "unavailable"}`}>
             <div className="row">
-              <strong>
-                {product.name} {product.type === "COMBO" && <span className="badge">combo</span>}
-              </strong>
+              {product.photoUrl && <img src={product.photoUrl} alt={product.name} className="thumb" />}
+              <div style={{ flex: 1 }}>
+                <strong>
+                  {product.name} {product.type === "COMBO" && <span className="badge">combo</span>}
+                  {!product.isPublished && <span className="badge warn">rascunho</span>}
+                </strong>
+                {(product.calories || product.weightGrams) && (
+                  <p className="muted">
+                    {product.calories ? `${product.calories} kcal` : ""}
+                    {product.calories && product.weightGrams ? " · " : ""}
+                    {product.weightGrams ? `${product.weightGrams}g` : ""}
+                  </p>
+                )}
+              </div>
               <span>R$ {Number(product.price).toFixed(2)}</span>
             </div>
             <div className="row">
-              <label>
-                <input type="checkbox" checked={product.isAvailable} onChange={() => toggleAvailability(product)} /> Disponível
-              </label>
+              <div style={{ display: "flex", gap: 12 }}>
+                <label>
+                  <input type="checkbox" checked={product.isAvailable} onChange={() => toggleAvailability(product)} /> Disponível
+                </label>
+                <label>
+                  <input type="checkbox" checked={product.isPublished} onChange={() => togglePublished(product)} /> Publicado
+                </label>
+              </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => startEdit(product)}>Editar</button>
                 <button onClick={() => remove(product)}>Remover</button>

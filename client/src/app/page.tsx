@@ -11,7 +11,7 @@ export default function CatalogPage() {
   const { addItem } = useCart();
 
   useEffect(() => {
-    apiFetch<Product[]>("/products")
+    apiFetch<Product[]>("/products?published=true")
       .then(setProducts)
       .catch(() => setError("Não foi possível carregar o cardápio. Tente novamente em instantes."));
   }, []);
@@ -34,6 +34,22 @@ export default function CatalogPage() {
             </h3>
           </div>
           {product.description && <p className="muted">{product.description}</p>}
+
+          {(product.calories || product.weightGrams) && (
+            <p className="muted">
+              {product.calories ? `${product.calories} kcal` : ""}
+              {product.calories && product.weightGrams ? " · " : ""}
+              {product.weightGrams ? `${product.weightGrams}g` : ""}
+            </p>
+          )}
+
+          {product.ingredients.length > 0 && (
+            <details>
+              <summary className="muted">Ingredientes</summary>
+              <p className="muted">{product.ingredients.join(", ")}</p>
+            </details>
+          )}
+
           {product.type === "COMBO" && product.comboItems && product.comboItems.length > 0 && (
             <ul className="muted">
               {product.comboItems.map((ci) => (

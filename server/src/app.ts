@@ -1,3 +1,4 @@
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import { env } from "./env.js";
@@ -19,6 +20,8 @@ export function createApp() {
   app.use(express.json());
 
   app.get("/health", (_req, res) => res.json({ ok: true, env: env.NODE_ENV }));
+
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use(router);
 

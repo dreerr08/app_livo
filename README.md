@@ -35,6 +35,30 @@ dev). O painel recebe pedidos pagos em tempo real via WebSocket (sala
 Regra central: um pedido nasce em `AWAITING_PAYMENT` e só entra na fila de
 preparo (`RECEIVED`) quando o pagamento é confirmado — nunca antes.
 
+## Cardápio (Épico 11)
+
+O restaurante cadastra e edita o cardápio no painel: nome, descrição,
+preço, foto (upload de arquivo — não é mais uma URL colada), calorias,
+peso e lista de ingredientes.
+
+Cada item nasce como **rascunho**: só aparece no painel, para o
+restaurante preparar os detalhes com calma. O app do cliente só lista
+itens depois que o restaurante marca **Publicado** — isso é separado do
+toggle **Disponível** (esgotado), que é sobre estoque: um item pode
+estar publicado e esgotado ao mesmo tempo (cliente vê, mas não pode
+pedir), mas nunca aparece pro cliente enquanto for rascunho.
+
+`GET /products` sem parâmetros devolve tudo (uso do painel); com
+`?published=true` filtra só os publicados (uso do app do cliente).
+
+**Upload de foto**: a imagem é salva em disco no servidor
+(`server/uploads/products/`) e servida em `/uploads/products/<arquivo>`.
+Funciona bem para rodar hoje, mas é armazenamento efêmero em várias
+plataformas de hospedagem (o disco pode ser apagado a cada redeploy).
+Antes de produção, trocar por um bucket (S3, Cloudinary etc.) — é só
+reescrever `server/src/middlewares/upload.ts`, nada mais no sistema
+depende de como a imagem é guardada.
+
 ## Autenticação (Épico 4)
 
 Login por telefone + código de verificação (OTP), sem exigir senha. O
@@ -121,8 +145,10 @@ de negócio centrais: pedido só entra na fila após pagamento, CEP fora da
 zona bloqueia entrega, item esgotado bloqueia pedido, cliente não vê
 pedido de outro cliente, fluxo completo de Pix (criação → webhook →
 fila → transição de status), cartão aprovado/recusado, login por OTP
-(incluindo a recuperação do fluxo de primeiro acesso sem nome), e CORS
-liberando as duas origens do front-end.
+(incluindo a recuperação do fluxo de primeiro acesso sem nome), CORS
+liberando as duas origens do front-end, item nasce rascunho e só aparece
+pro cliente após publicado, e upload de foto (aceita imagem, rejeita
+outros tipos de arquivo).
 
 ```bash
 cd server

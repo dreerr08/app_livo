@@ -117,7 +117,13 @@ model Product {
   price       Decimal     @db.Decimal(10, 2)
   type        ProductType @default(AVULSO)
   category    String?
+  calories    Int?
+  weightGrams Int?
+  ingredients String[]    @default([])
   isAvailable Boolean     @default(true)
+  // Rascunho até o restaurante publicar — só então aparece no app do
+  // cliente. Separado de isAvailable (esgotado), que é sobre estoque.
+  isPublished Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 

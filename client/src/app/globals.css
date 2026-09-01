@@ -180,6 +180,10 @@ select {
   font-size: 0.9rem;
 }
 
+summary {
+  cursor: pointer;
+}
+
 .tabs {
   display: flex;
   gap: 8px;

@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { asyncHandler } from "../middlewares/asyncHandler.js";
 import { requireAuth, optionalAuth } from "../middlewares/requireAuth.js";
+import { uploadProductPhoto } from "../middlewares/upload.js";
 import * as auth from "../controllers/auth.controller.js";
 import * as products from "../controllers/products.controller.js";
 import * as customers from "../controllers/customers.controller.js";
 import * as addresses from "../controllers/addresses.controller.js";
 import * as deliveryZones from "../controllers/deliveryZones.controller.js";
 import * as orders from "../controllers/orders.controller.js";
+import * as uploads from "../controllers/uploads.controller.js";
 import * as webhooks from "../controllers/webhooks.controller.js";
 
 export const router = Router();
@@ -21,7 +23,11 @@ router.get("/products/:id", asyncHandler(products.getProduct));
 router.post("/products", asyncHandler(products.createProduct));
 router.put("/products/:id", asyncHandler(products.updateProduct));
 router.patch("/products/:id/availability", asyncHandler(products.setAvailability));
+router.patch("/products/:id/published", asyncHandler(products.setPublished));
 router.delete("/products/:id", asyncHandler(products.deleteProduct));
+
+// Upload de foto do cardápio (Épico 11)
+router.post("/uploads/product-photo", uploadProductPhoto, asyncHandler(uploads.uploadProductPhoto));
 
 // Cliente autenticado (Épico 4, 8)
 router.get("/me", requireAuth, asyncHandler(customers.getMe));

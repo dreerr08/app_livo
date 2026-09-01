@@ -8,6 +8,9 @@ export type Product = {
   price: string;
   type: "AVULSO" | "COMBO";
   category?: string | null;
+  calories?: number | null;
+  weightGrams?: number | null;
+  ingredients: string[];
   isAvailable: boolean;
   comboItems?: ComboItem[];
 };

@@ -10,16 +10,24 @@ const productInput = z.object({
   price: z.number().positive(),
   type: z.enum(["AVULSO", "COMBO"]).default("AVULSO"),
   category: z.string().optional(),
+  calories: z.number().int().nonnegative().optional(),
+  weightGrams: z.number().int().positive().optional(),
+  ingredients: z.array(z.string().min(1)).default([]),
   isAvailable: z.boolean().default(true),
   // Quando type = COMBO: itens fixos que compõem o kit.
   comboItems: z.array(z.object({ itemId: z.string(), quantity: z.number().int().positive() })).optional(),
 });
 
-// GET /products — catálogo completo (combos + avulsos), com opção de esconder esgotados
+// GET /products — usado tanto pelo painel (vê tudo, inclusive rascunho e
+// esgotado, para gerenciar) quanto pelo app do cliente (?published=true
+// filtra só o que o restaurante já liberou para visualização).
 export async function listProducts(req: Request, res: Response) {
-  const onlyAvailable = req.query.available === "true";
+  const where: { isAvailable?: boolean; isPublished?: boolean } = {};
+  if (req.query.available === "true") where.isAvailable = true;
+  if (req.query.published === "true") where.isPublished = true;
+
   const products = await prisma.product.findMany({
-    where: onlyAvailable ? { isAvailable: true } : undefined,
+    where,
     include: { comboItems: { include: { item: true } } },
     orderBy: { name: "asc" },
   });
@@ -45,7 +53,13 @@ export async function createProduct(req: Request, res: Response) {
       price: data.price,
       type: data.type,
       category: data.category,
+      calories: data.calories,
+      weightGrams: data.weightGrams,
+      ingredients: data.ingredients,
       isAvailable: data.isAvailable,
+      // Nasce como rascunho: o restaurante prepara foto/detalhes com
+      // calma e só depois publica para o cliente ver (ver setPublished).
+      isPublished: false,
       comboItems: data.comboItems
         ? { create: data.comboItems.map((ci) => ({ itemId: ci.itemId, quantity: ci.quantity })) }
         : undefined,
@@ -66,6 +80,9 @@ export async function updateProduct(req: Request, res: Response) {
       price: data.price,
       type: data.type,
       category: data.category,
+      calories: data.calories,
+      weightGrams: data.weightGrams,
+      ingredients: data.ingredients,
       isAvailable: data.isAvailable,
     },
   });
@@ -78,6 +95,19 @@ export async function setAvailability(req: Request, res: Response) {
   const product = await prisma.product.update({
     where: { id: req.params.id },
     data: { isAvailable },
+  });
+  res.json(product);
+}
+
+// PATCH /products/:id/published — liberar (ou recolher) o item para o
+// app do cliente. Separado de isAvailable: um item pode estar publicado
+// e esgotado (cliente vê, mas não pode pedir), mas nunca aparece pro
+// cliente enquanto for rascunho.
+export async function setPublished(req: Request, res: Response) {
+  const { isPublished } = z.object({ isPublished: z.boolean() }).parse(req.body);
+  const product = await prisma.product.update({
+    where: { id: req.params.id },
+    data: { isPublished },
   });
   res.json(product);
 }
